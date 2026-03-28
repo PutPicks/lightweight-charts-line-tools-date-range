@@ -167,22 +167,19 @@ export class LineToolDateRangePaneView<HorzScaleItem> extends LineToolPaneView<H
 		const timeDiffSeconds = maxTimestamp - minTimestamp;
 		const calendarDays = Math.round(timeDiffSeconds / 86400);
 
-		// Count actual bars by iterating through series data
+		// Count bars using logical indices from screen coordinates
 		let barCount = 0;
 
 		try {
-			const series = this._tool.getSeries();
-			const data = series.data() as any[];
+			const timeScale = this._chart.timeScale();
 			
-			if (data && data.length > 0) {
-				// Count bars where time is > minTimestamp and <= maxTimestamp
-				// This matches TradingView behavior: don't count the starting bar
-				for (let i = 0; i < data.length; i++) {
-					const barTime = data[i].time as number;
-					if (barTime > minTimestamp && barTime <= maxTimestamp) {
-						barCount++;
-					}
-				}
+			// Convert screen X coordinates to logical indices
+			const logical0 = timeScale.coordinateToLogical(minX as Coordinate);
+			const logical1 = timeScale.coordinateToLogical(maxX as Coordinate);
+			
+			if (logical0 !== null && logical1 !== null) {
+				// The difference in logical indices = number of bars
+				barCount = Math.abs(Math.round(logical1) - Math.round(logical0));
 			}
 		} catch (e) {
 			// Fallback: estimate from calendar days
