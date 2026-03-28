@@ -92,29 +92,44 @@
                 return;
             const time0Raw = allActivePoints[0];
             const time1Raw = allActivePoints[1];
-            // Calculate bars (using logical index difference)
-            const timeScale = this._chart.timeScale();
-            timeScale.timeToCoordinate(time0Raw.timestamp);
-            timeScale.timeToCoordinate(time1Raw.timestamp);
-            // Get the actual bar count by checking the data
-            this._tool.getSeries();
-            let barCount = 0;
-            // Calculate approximate bars from timestamp difference and typical bar spacing
             const timestamp0 = time0Raw.timestamp;
             const timestamp1 = time1Raw.timestamp;
             const timeDiffSeconds = Math.abs(timestamp1 - timestamp0);
-            // For daily data, one bar = 86400 seconds (24 hours)
-            // But markets are only open ~5 days a week, so we use calendar days
             const calendarDays = Math.round(timeDiffSeconds / 86400);
-            // Estimate trading bars (roughly 5/7 of calendar days for stocks)
-            barCount = Math.round(calendarDays * 5 / 7);
-            if (barCount < 1 && calendarDays > 0)
-                barCount = 1;
-            // Format the label: "X bars, Y days"
+            const timeScale = this._chart.timeScale();
+            let barCount = 0;
+            try {
+                const logicalRange = timeScale.getVisibleLogicalRange();
+                if (logicalRange) {
+                    const coord0 = timeScale.timeToCoordinate(time0Raw.timestamp);
+                    const coord1 = timeScale.timeToCoordinate(time1Raw.timestamp);
+                    if (coord0 !== null && coord1 !== null) {
+                        const visibleRange = timeScale.getVisibleRange();
+                        if (visibleRange) {
+                            const startTime = visibleRange.from;
+                            const endTime = visibleRange.to;
+                            const chartWidth = Math.abs((timeScale.timeToCoordinate(endTime) || 0) -
+                                (timeScale.timeToCoordinate(startTime) || 0));
+                            if (logicalRange && chartWidth > 0) {
+                                const barsInView = logicalRange.to - logicalRange.from;
+                                const pixelsPerBar = chartWidth / barsInView;
+                                if (pixelsPerBar > 0) {
+                                    const pixelDiff = Math.abs(coord1 - coord0);
+                                    barCount = Math.round(pixelDiff / pixelsPerBar);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (e) {
+                barCount = Math.round(calendarDays * 5 / 7);
+            }
+            if (barCount < 0)
+                barCount = 0;
             const barsText = barCount === 1 ? '1 bar' : `${barCount} bars`;
             const daysText = calendarDays === 1 ? '1 day' : `${calendarDays} days`;
             const labelText = `${barsText}, ${daysText}`;
-            // Position: center of the box, at the arrow end
             const geometricCenterX = (minX + maxX) / 2;
             const labelY = ((minY + maxY) / 2);
             const labelPivot = new lightweightChartsLineToolsCore.AnchorPoint(geometricCenterX, labelY, 0);
@@ -129,7 +144,6 @@
             finalLabelOptions.font.size = labelFontSize;
             finalLabelOptions.font.bold = true;
             finalLabelOptions.font.color = labelColor;
-            // Offset to push label above the arrow
             finalLabelOptions.box.offset = { x: 0, y: -15 };
             finalLabelOptions.box.background = {
                 color: 'rgba(0, 0, 0, 0.7)',
