@@ -22,8 +22,7 @@
   ],
   "scripts": {
     "build": "rollup -c && typedoc",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "prepare": "npm run build"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "PutPicks",
   "license": "MPL-2.0",
