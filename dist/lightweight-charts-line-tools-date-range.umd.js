@@ -40,16 +40,50 @@
             const maxY = Math.max(P0.y, P1.y);
             const topLeftScreen = new lightweightChartsLineToolsCore.AnchorPoint(minX, minY, 0);
             const bottomRightScreen = new lightweightChartsLineToolsCore.AnchorPoint(maxX, maxY, 1);
-            // --- 1. Rectangle Body ---
+            // --- 1. Rectangle Body (no border - we draw left/right lines separately) ---
             const rectBodyPoints = [topLeftScreen, bottomRightScreen];
+            const rectOptions = lightweightChartsLineToolsCore.deepCopy(options.dateRange.rectangle);
+            rectOptions.border = null;
             this._rectangleRenderer.setData({
-                ...lightweightChartsLineToolsCore.deepCopy(options.dateRange.rectangle),
+                ...rectOptions,
                 points: rectBodyPoints,
                 hitTestBackground: true,
                 toolDefaultHoverCursor: options.defaultHoverCursor,
                 toolDefaultDragCursor: options.defaultDragCursor,
             });
             compositeRenderer.append(this._rectangleRenderer);
+            // --- 1b. Left and Right border lines only ---
+            const borderColor = options.dateRange.rectangle.border?.color || '#22c55e';
+            const borderWidth = options.dateRange.rectangle.border?.width || 2;
+            const borderStyle = options.dateRange.rectangle.border?.style ?? lightweightCharts.LineStyle.Solid;
+            const leftLineRenderer = new lightweightChartsLineToolsCore.SegmentRenderer();
+            leftLineRenderer.setData({
+                points: [new lightweightChartsLineToolsCore.AnchorPoint(minX, minY, 0), new lightweightChartsLineToolsCore.AnchorPoint(minX, maxY, 1)],
+                line: {
+                    color: borderColor,
+                    width: borderWidth,
+                    style: borderStyle,
+                    extend: { left: false, right: false },
+                    join: 'miter',
+                    cap: 'butt',
+                    end: { left: lightweightChartsLineToolsCore.LineEnd.Normal, right: lightweightChartsLineToolsCore.LineEnd.Normal },
+                },
+            });
+            compositeRenderer.append(leftLineRenderer);
+            const rightLineRenderer = new lightweightChartsLineToolsCore.SegmentRenderer();
+            rightLineRenderer.setData({
+                points: [new lightweightChartsLineToolsCore.AnchorPoint(maxX, minY, 0), new lightweightChartsLineToolsCore.AnchorPoint(maxX, maxY, 1)],
+                line: {
+                    color: borderColor,
+                    width: borderWidth,
+                    style: borderStyle,
+                    extend: { left: false, right: false },
+                    join: 'miter',
+                    cap: 'butt',
+                    end: { left: lightweightChartsLineToolsCore.LineEnd.Normal, right: lightweightChartsLineToolsCore.LineEnd.Normal },
+                },
+            });
+            compositeRenderer.append(rightLineRenderer);
             // --- 2. Horizontal Arrow ---
             const activePoints = tool.points();
             if (activePoints.length >= 2) {
