@@ -94,35 +94,28 @@
             const time1Raw = allActivePoints[1];
             const timestamp0 = time0Raw.timestamp;
             const timestamp1 = time1Raw.timestamp;
-            const timeDiffSeconds = Math.abs(timestamp1 - timestamp0);
+            const minTimestamp = Math.min(timestamp0, timestamp1);
+            const maxTimestamp = Math.max(timestamp0, timestamp1);
+            const timeDiffSeconds = maxTimestamp - minTimestamp;
             const calendarDays = Math.round(timeDiffSeconds / 86400);
-            const timeScale = this._chart.timeScale();
+            // Count actual bars by iterating through series data
             let barCount = 0;
             try {
-                const logicalRange = timeScale.getVisibleLogicalRange();
-                if (logicalRange) {
-                    const coord0 = timeScale.timeToCoordinate(time0Raw.timestamp);
-                    const coord1 = timeScale.timeToCoordinate(time1Raw.timestamp);
-                    if (coord0 !== null && coord1 !== null) {
-                        const visibleRange = timeScale.getVisibleRange();
-                        if (visibleRange) {
-                            const startTime = visibleRange.from;
-                            const endTime = visibleRange.to;
-                            const chartWidth = Math.abs((timeScale.timeToCoordinate(endTime) || 0) -
-                                (timeScale.timeToCoordinate(startTime) || 0));
-                            if (logicalRange && chartWidth > 0) {
-                                const barsInView = logicalRange.to - logicalRange.from;
-                                const pixelsPerBar = chartWidth / barsInView;
-                                if (pixelsPerBar > 0) {
-                                    const pixelDiff = Math.abs(coord1 - coord0);
-                                    barCount = Math.round(pixelDiff / pixelsPerBar);
-                                }
-                            }
+                const series = this._tool.getSeries();
+                const data = series.data();
+                if (data && data.length > 0) {
+                    // Count bars where time is > minTimestamp and <= maxTimestamp
+                    // This matches TradingView behavior: don't count the starting bar
+                    for (let i = 0; i < data.length; i++) {
+                        const barTime = data[i].time;
+                        if (barTime > minTimestamp && barTime <= maxTimestamp) {
+                            barCount++;
                         }
                     }
                 }
             }
             catch (e) {
+                // Fallback: estimate from calendar days
                 barCount = Math.round(calendarDays * 5 / 7);
             }
             if (barCount < 0)
